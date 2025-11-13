@@ -759,3 +759,78 @@ save_to_excel_multisheet <- function(filename, sheet_names, data_list) {
     cat(paste("Error saving file '", filename, "': ", e$message, "\n", sep=""))
   })
 }
+
+#' Find the Most Recently Modified File in a Folder
+#'
+#' @description
+#' Scans a specified directory and returns the full path of the file with the
+#' most recent modification time.
+#'
+#' This function only searches for files within the specified folder and
+#' ignores sub-directories.
+#'
+#' @param folder_path A character string specifying the path to the directory
+#'   you want to scan.
+#'
+#' @return A character string providing the full file path to the most recently
+#'   modified file. It returns `character(0)` (an empty character vector) if
+#'   the folder is empty or contains no files (e.g., only sub-directories).
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # --- Setup a temporary example ---
+#' # Create a temporary directory
+#' temp_dir <- tempdir()
+#'
+#' # Create an "old" file
+#' writeLines("This is the first file.", file.path(temp_dir, "file_A.txt"))
+#'
+#' # Pause for 1.1 seconds to ensure a different modification time
+#' Sys.sleep(1.1)
+#'
+#' # Create a "new" file
+#' writeLines("This is the second, newer file.", file.path(temp_dir, "file_B.txt"))
+#'
+#' # --- Run the function ---
+#' # This will fild "file_B.txt" because it's the most recent
+#' recent_file <- mr_file(temp_dir)
+#' print(recent_file)
+#'
+#' # Check the file name
+#' if (length(recent_file) > 0) {
+#'   print(basename(recent_file))
+#' }
+#'
+#' # --- Clean up ---
+#' unlink(file.path(temp_dir, c("file_A.txt", "file_B.txt")))
+#' }
+#'
+mr_file <- function(folder_path) {
+  # 1. Get all paths in the folder (files and directories)
+  all_paths <- list.files(folder_path, full.names = TRUE)
+
+  # 2. Handle empty folder
+  if (length(all_paths) == 0) {
+    # Return an empty vector, not NA or NULL
+    return(character(0))
+  }
+
+  # 3. Get file information for all paths
+  file_details <- file.info(all_paths)
+
+  # 4. Filter out any directories, keeping only files
+  file_only_details <- file_details[!file_details$isdir, ]
+
+  # 5. Handle folder with no files (e.g., only sub-dirs)
+  if (nrow(file_only_details) == 0) {
+    return(character(0))
+  }
+
+  # 6. Find the row with the maximum modification time (mtime)
+  #    rownames() here contain the full file paths we passed to file.info()
+  most_recent_file <- rownames(file_only_details)[which.max(file_only_details$mtime)]
+
+  return(most_recent_file)
+}
