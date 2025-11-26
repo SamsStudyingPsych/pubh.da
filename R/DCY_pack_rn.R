@@ -619,9 +619,39 @@ calculate_edit_distance <- function(str1_vec, str2_vec, ignore_strings = NULL) {
 #'
 #' @param str1_vec A character vector.
 #' @param str2_vec A character vector, same length as `str1_vec`.
-#' @param tfidf_weights A data.frame with columns `word` and `idf`.
+#' @param tfidf_weights (Optional) A data.frame with columns `word` and `idf`. 
+#'   If NULL, weights are calculated automatically from the input vectors.
 #' @return A numeric vector of similarity scores.
-calculate_tfidf_similarity <- function(str1_vec, str2_vec, tfidf_weights) {
+calculate_tfidf_similarity <- function(str1_vec, str2_vec, tfidf_weights = NULL) {
+  
+  # --- 1. Auto-calculate weights if not provided ---
+  if (is.null(tfidf_weights)) {
+    # Create the "universe" of words from both vectors
+    corpus_vector <- unique(c(str1_vec, str2_vec))
+    corpus_vector <- corpus_vector[!is.na(corpus_vector)]
+    
+    # Create a temporary dataframe to calculate IDF
+    # We use tibble/dplyr/tidyr here as the package already imports tidyverse
+    all_words_df <- tibble::tibble(raw_text = corpus_vector) %>%
+      dplyr::mutate(doc_id = dplyr::row_number()) %>%
+      # Use strictly the same tokenization as .tfidf_score_scalar (split by whitespace)
+      dplyr::mutate(word_list = strsplit(tolower(raw_text), "\\s+")) %>%
+      tidyr::unnest(word_list) %>%
+      dplyr::rename(word = word_list)
+
+    # Calculate IDF (Inverse Document Frequency)
+    tfidf_weights <- all_words_df %>%
+      dplyr::distinct(doc_id, word) %>%
+      dplyr::count(word, name = "n_docs") %>%
+      dplyr::mutate(
+        total_docs = dplyr::n_distinct(all_words_df$doc_id),
+        # Higher score = RARE word. Lower score = COMMON word.
+        idf = log(total_docs / n_docs)
+      ) %>%
+      dplyr::select(word, idf)
+  }
+
+  # --- 2. Run the calculation using the weights ---
   mapply(.tfidf_score_scalar, str1_vec, str2_vec, MoreArgs = list(tfidf_weights = tfidf_weights))
 }
 
