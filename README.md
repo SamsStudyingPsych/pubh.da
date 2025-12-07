@@ -52,11 +52,11 @@ missing_records <- cross_check_missing(
 
 3. Record Linkage & String Matching
 
-Administrative data often contains slightly different names for the same entity (e.g., "ABC Learning Center" vs. "ABC Learning Ctr LLC").
+Administrative data often contains slightly different names for the same entity (e.g., "Provider Center Xenus" vs. "Provider Cntr X").
 
 # Find the best match for a name from an approved list
 # Returns the longest substring match if a perfect match isn't found
-match <- find_best_match("ABC Learning Center LLC", approved_providers)
+match <- find_best_match("PROVIDER_X", providers)
 
 # Calculate similarity scores for fuzzy matching
 df <- df %>%
