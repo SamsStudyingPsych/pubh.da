@@ -23,7 +23,7 @@ Installation
 You can install the development version from GitHub:
 
 # install.packages("devtools")
-devtools::install_github("yourusername/admincleanr")
+devtools::install_github("SamsStudyingPsych/admincleanr")
 
 
 Usage Highlights
