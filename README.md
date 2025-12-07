@@ -45,8 +45,8 @@ When a left_join returns fewer rows than expected, cross_check_missing() helps y
 missing_records <- cross_check_missing(
   df1 = df, 
   df2 = address_master, 
-  check_var = ADDR_LN1, 
-  id_var = PERS_ID
+  check_var = ADDRESS_LINE_1, 
+  id_var = PERSON_ID
 )
 
 
