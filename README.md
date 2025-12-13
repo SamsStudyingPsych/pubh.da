@@ -1,7 +1,7 @@
-# install.packages("devtools")
+# Download in RStudio
 devtools::install_github("SamsStudyingPsych/admincleanr")
 
-admincleanr
+# admincleanr
 
 A Toolkit for Administrative Data Cleaning and Record Linkage
 
