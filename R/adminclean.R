@@ -726,3 +726,59 @@ lazy_table <- function(data,
 
 }
 
+
+#' Collapse consecutive date ranges
+#'
+#' Groups rows by specified variables and merges consecutive date ranges.
+#' Ranges are considered consecutive if the start date of a row is
+#' exactly one day after the end date of the previous row in the group.
+#'
+#' @param df A data.frame or tibble.
+#' @param group_vars A character vector of column names to group by.
+#' @param start_var The name of the start date column (unquoted).
+#' @param end_var The name of the end date column (unquoted).
+#' @return A data.frame with consecutive date ranges merged.
+#' @export
+#' @importFrom dplyr group_by arrange mutate lag ungroup summarize
+#' @importFrom rlang syms enquo
+#' @examples
+#' \dontrun{
+#' # If row 1 ends 2023-01-01 and row 2 starts 2023-01-02, they will be merged.
+#' collapse_dates(df, group_vars = c("id", "category"), start_date, end_date)
+#' }
+collapse_dates <- function(df, group_vars, start_var, end_var) {
+  
+  # Convert string inputs to symbols for tidy evaluation
+  group_syms <- rlang::syms(group_vars)
+  start_quo <- rlang::enquo(start_var)
+  end_quo <- rlang::enquo(end_var)
+  
+  df %>%
+    # 1. Group by the user's ID variables
+    dplyr::group_by(!!!group_syms) %>%
+    # 2. Arrange by start date to ensure correct order
+    dplyr::arrange(!!start_quo, .by_group = TRUE) %>%
+    dplyr::mutate(
+      # 3. specific logic: if start <= previous end + 1, it's a continuation
+      # (Use +1 to handle the "consecutive day" requirement)
+      # We default the first row to being a "new group" (TRUE)
+      is_new_group = is.na(dplyr::lag(!!end_quo)) | 
+                     !!start_quo > (dplyr::lag(!!end_quo) + 1),
+      # 4. Create a unique ID for each continuous block
+      group_id = cumsum(is_new_group)
+    ) %>%
+    # 5. Group by original vars AND the new block ID
+    dplyr::group_by(!!!group_syms, group_id) %>%
+    # 6. Collapse to min start and max end
+    dplyr::summarize(
+      new_start = min(!!start_quo),
+      new_end = max(!!end_quo),
+      .groups = "drop"
+    ) %>%
+    # 7. cleanup
+    dplyr::select(-group_id) %>%
+    dplyr::rename(
+      !!rlang::quo_name(start_quo) := new_start,
+      !!rlang::quo_name(end_quo) := new_end
+    )
+}
