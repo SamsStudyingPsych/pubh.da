@@ -750,8 +750,8 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
   
   # Convert string inputs to symbols for tidy evaluation
   group_syms <- rlang::syms(group_vars)
-  start_quo <- rlang::enquo(start_var)
-  end_quo <- rlang::enquo(end_var)
+  start_quo <- rlang::ensym(start_var)
+  end_quo <- rlang::ensym(end_var)
   
   df %>%
     # 1. Group by the user's ID variables
@@ -763,7 +763,7 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
       # (Use +1 to handle the "consecutive day" requirement)
       # We default the first row to being a "new group" (TRUE)
       is_new_group = is.na(dplyr::lag(!!end_quo)) | 
-                     !!start_quo > (dplyr::lag(!!end_quo) + 1),
+                     !!start_quo > (dplyr::lag(!!end_quo) + 86400),
       # 4. Create a unique ID for each continuous block
       group_id = cumsum(is_new_group)
     ) %>%
@@ -782,3 +782,4 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
       !!rlang::quo_name(end_quo) := new_end
     )
 }
+
