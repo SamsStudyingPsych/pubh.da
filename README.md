@@ -1,3 +1,6 @@
+# install.packages("devtools")
+devtools::install_github("SamsStudyingPsych/admincleanr")
+
 admincleanr
 
 A Toolkit for Administrative Data Cleaning and Record Linkage
@@ -17,14 +20,6 @@ Dirty Record Linkage: Fuzzy matching and cross-checking for mismatched IDs or na
 Data Hygiene: Safer wrappers for standard cleaning tasks (handling NAs, dates, and strings).
 
 Lazy Visualization: Quick, publication-ready plots for distribution checks.
-
-Installation
-
-You can install the development version from GitHub:
-
-# install.packages("devtools")
-devtools::install_github("SamsStudyingPsych/admincleanr")
-
 
 Usage Highlights
 
