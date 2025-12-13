@@ -775,7 +775,7 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
       new_end = max(!!end_quo)
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::unique() %>%
+    unique() %>%
     # 7. cleanup
     dplyr::select(-group_id) %>%
     dplyr::rename(
@@ -783,5 +783,6 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
       !!rlang::quo_name(end_quo) := new_end
     )
 }
+
 
 
