@@ -770,11 +770,12 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
     # 5. Group by original vars AND the new block ID
     dplyr::group_by(!!!group_syms, group_id) %>%
     # 6. Collapse to min start and max end
-    dplyr::summarize(
+    dplyr::mutate(
       new_start = min(!!start_quo),
-      new_end = max(!!end_quo),
-      .groups = "drop"
+      new_end = max(!!end_quo)
     ) %>%
+    dplyr::ungroup() %>%
+    dplyr::unique() %>%
     # 7. cleanup
     dplyr::select(-group_id) %>%
     dplyr::rename(
@@ -782,4 +783,5 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
       !!rlang::quo_name(end_quo) := new_end
     )
 }
+
 
