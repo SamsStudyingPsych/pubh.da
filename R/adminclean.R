@@ -613,22 +613,6 @@ lazy_line <- function(data, x_var, y_var, title = "Trend", x_lab = "X Axis", y_l
     ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 45, hjust = 1))
 }
 
-
-#' Lazy Clean Names
-#'
-#' @param data Dataframe.
-#' @return Dataframe with clean names.
-#' @export
-#' @importFrom janitor clean_names
-#' @examples
-#' \dontrun{
-#' lazy_names(df)
-#' }
-lazy_names <- function(data) {
-  janitor::clean_names(data)
-}
-
-
 #' Lazy Table (gt Style 6)
 #'
 #' @param data Dataframe.
@@ -882,4 +866,47 @@ read_sheets_exclude_query <- function(filepath, id_col = NULL) {
     dplyr::bind_rows(.id = id_col)
   
   return(combined_data)
+}
+
+#' Rename columns to a formal Title Case format
+#'
+#' Replaces underscores and dots with spaces, converts to Title Case,
+#' and expands specific abbreviations (ID, NBR -> Number, CD -> Code).
+#'
+#' @param .data A data.frame.
+#' @return A data.frame with renamed columns.
+#' @export
+#' @importFrom dplyr rename_with
+#' @examples
+#' \dontrun{
+#' placement_df %>% rename_formal()
+#' }
+rename_formal <- function(.data) {
+  
+  formatter <- function(x) {
+    # 1. Replace underscores and dots with spaces
+    x <- gsub("[_\\.]", " ", x)
+    
+    # 2. Convert to Title Case
+    # Split by space, capitalize first letter of each word, lower the rest, rejoin.
+    x <- sapply(x, function(s) {
+      words <- unlist(strsplit(s, " "))
+      # Handle cases with multiple spaces or empty strings gracefully
+      words <- words[words != ""]
+      if (length(words) == 0) return(s)
+      
+      words <- paste0(toupper(substring(words, 1, 1)), 
+                      tolower(substring(words, 2)))
+      paste(words, collapse = " ")
+    })
+    
+    # 3. Specific Replacements (using word boundaries \b to be safe)
+    x <- gsub("\\bId\\b", "ID", x)
+    x <- gsub("\\bNbr\\b", "Number", x)
+    x <- gsub("\\bCd\\b", "Code", x)
+    
+    return(x)
+  }
+
+  dplyr::rename_with(.data, formatter)
 }
