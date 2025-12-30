@@ -492,25 +492,79 @@ save_to_excel_multisheet <- function(filename, sheet_names, data_list) {
 }
 
 
-#' Find the Most Recently Modified File in a Folder
+#' Find and Read the Most Recently Modified File
 #'
-#' @param folder_path Path to directory.
-#' @return Full path to the most recent file.
+#' Identifies the most recently modified file in a specified directory and attempts
+#' to read it into R based on its file extension.
+#'
+#' Currently supports:
+#' \itemize{
+#'   \item .csv (via \code{read.csv})
+#'   \item .xlsx (via \code{readxl::read_excel})
+#'   \item .parquet (via \code{arrow::read_parquet})
+#' }
+#'
+#' @param folder_path A string specifying the path to the directory to search.
+#' @param ... Additional arguments passed to the underlying read function
+#'   (e.g., `sheet = "Sheet1"` for Excel files).
+#' @return A data.frame containing the contents of the most recent file, or NULL
+#'   if the file format is not supported.
 #' @export
+#' @importFrom tools file_ext
+#' @importFrom readxl read_excel
 #' @examples
 #' \dontrun{
-#' latest_file <- mr_file("data/downloads")
+#' # Automatically find and read the newest file (e.g., a parquet file)
+#' placement_df <- mr_file("data/downloads")
+#'
+#' # specific sheet for xlsx
+#' placement_df <- mr_file("data/downloads", sheet = "Raw Data")
 #' }
-mr_file <- function(folder_path) {
+mr_file <- function(folder_path, ...) {
+  # 1. Find all files in the folder
   all_paths <- list.files(folder_path, full.names = TRUE)
-  if (length(all_paths) == 0) return(character(0))
+  
+  if (length(all_paths) == 0) {
+    warning("No files found in the specified directory.")
+    return(NULL)
+  }
+  
+  # 2. Extract file info and filter out directories
   file_details <- file.info(all_paths)
   file_only_details <- file_details[!file_details$isdir, ]
-  if (nrow(file_only_details) == 0) return(character(0))
-  rownames(file_only_details)[which.max(file_only_details$mtime)]
+  
+  if (nrow(file_only_details) == 0) {
+    warning("Directory contains only sub-folders, no files.")
+    return(NULL)
+  }
+  
+  # 3. Identify the most recently modified file
+  most_recent_path <- rownames(file_only_details)[which.max(file_only_details$mtime)]
+  file_extension <- tolower(tools::file_ext(most_recent_path))
+  
+  message(paste("Reading most recent file:", basename(most_recent_path)))
+  
+  # 4. Switch based on extension
+  if (file_extension == "csv") {
+    # Using base read.csv for minimal dependencies, but you can swap for readr::read_csv
+    return(read.csv(most_recent_path, ...))
+    
+  } else if (file_extension == "xlsx") {
+    # Requires readxl
+    return(readxl::read_excel(most_recent_path, ...))
+    
+  } else if (file_extension == "parquet") {
+    # Check for arrow package availability
+    if (!requireNamespace("arrow", quietly = TRUE)) {
+      stop("The 'arrow' package is needed for parquet files. Please install it with install.packages('arrow').")
+    }
+    return(arrow::read_parquet(most_recent_path, ...))
+    
+  } else {
+    warning(paste("Most recent file has unsupported extension:", file_extension))
+    return(NULL)
+  }
 }
-
-
 #' Cross Check Missing Data
 #'
 #' @param df1 Primary dataframe.
@@ -910,3 +964,4 @@ rename_formal <- function(.data) {
 
   dplyr::rename_with(.data, formatter)
 }
+
