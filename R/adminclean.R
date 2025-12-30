@@ -784,5 +784,102 @@ collapse_dates <- function(df, group_vars, start_var, end_var) {
     )
 }
 
+#' @description
+#' Takes an existing openxlsx Workbook object and replaces every instance of a 
+#' specified text pattern with a replacement value across all sheets.
+#' 
+#' This function modifies the Workbook object in place (as openxlsx objects are 
+#' environments) but also returns it for pipe-friendliness.
+#'
+#' @param wb A Workbook object (created via openxlsx::loadWorkbook or createWorkbook).
+#' @param find_val The text string or regex pattern to search for.
+#' @param replace_val The text string to replace the found pattern with.
+#' @return The modified Workbook object.
+#' @importFrom openxlsx readWorkbook writeData
+#' @importFrom base gsub
+update_workbook_val <- function(wb, find_val, replace_val) {
+  
+  # Loop through every sheet in the workbook object
+  for (sheet in names(wb)) {
+    
+    # Read the sheet data into 'df'
+    # colNames = FALSE ensures headers are treated as regular data rows so they get updated too
+    # skipEmptyRows = FALSE preserves the row structure
+    df <- openxlsx::readWorkbook(
+      wb, 
+      sheet = sheet, 
+      colNames = FALSE, 
+      skipEmptyRows = FALSE
+    )
+    
+    # Check if the sheet actually has data
+    if (!is.null(df) && nrow(df) > 0) {
+      
+      # Iterate through every column to find and replace the text
+      # We apply this only to character columns to avoid corrupting dates/numbers
+      df[] <- lapply(df, function(x) {
+        if (is.character(x)) {
+          # perform the substitution
+          return(gsub(find_val, replace_val, x))
+        } else {
+          return(x)
+        }
+      })
+      
+      # Write the modified data back to the sheet object
+      # We write over the existing data starting at cell A1
+      openxlsx::writeData(
+        wb, 
+        sheet = sheet, 
+        x = df, 
+        colNames = FALSE, 
+        rowNames = FALSE, 
+        startCol = 1, 
+        startRow = 1
+      )
+    }
+  }
+  
+  return(wb)
+}
 
 
+
+#' combines them into a single dataframe using `bind_rows`.
+#'
+#' @param filepath A character string path to the .xlsx file.
+#' @param id_col Optional. A string name for a new column to store the
+#'   sheet names. If NULL (default), no ID column is created.
+#'
+#' @return A combined dataframe of all relevant sheets.
+#' @export
+#' @importFrom readxl excel_sheets read_excel
+#' @importFrom purrr map set_names
+#' @importFrom dplyr bind_rows %>%
+#'
+#' @examples
+#' \dontrun{
+#' # Combine all sheets, ignoring "Query"
+#' df <- read_sheets_exclude_query("data/report.xlsx")
+#'
+#' # Combine all sheets and add a column "source_sheet" tracking origin
+#' df <- read_sheets_exclude_query("data/report.xlsx", id_col = "source_sheet")
+#' }
+read_sheets_exclude_query <- function(filepath, id_col = NULL) {
+  
+  # 1. Get all sheet names
+  all_sheets <- readxl::excel_sheets(filepath)
+  
+  # 2. Filter out "Query"
+  # setdiff is a safe way to remove specific items from a vector
+  sheets_to_read <- setdiff(all_sheets, "Query")
+  
+  # 3. Read and Bind
+  # We use set_names() so that bind_rows() can use the names for the id_col
+  combined_data <- sheets_to_read %>%
+    purrr::set_names() %>%
+    purrr::map(~ readxl::read_excel(filepath, sheet = .x)) %>%
+    dplyr::bind_rows(.id = id_col)
+  
+  return(combined_data)
+}
