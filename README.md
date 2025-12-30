@@ -83,7 +83,7 @@ lazy_hist(df, "age", binwidth_val = 5)
 lazy_line(df, x_var = week_num, y_var = total_cases)
 
 
-Contributing
+# Contributing
 
 This package was born out of the need to streamline public health and case management data analytics. Pull requests are welcome for any function that solves a repetitive administrative data task.
 
